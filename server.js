@@ -3,7 +3,7 @@ const axios = require('axios');
 const cors = require('cors');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 app.use(cors());
 
@@ -43,31 +43,52 @@ app.get('/search', async (req, res) => {
     const searchRes = await axios.get('https://catalog.roblox.com/v1/search/items', {
       params,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' // More realistic UA
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' // realistic UA
       }
     });
 
-    const items = searchRes.data.data;
+    const items = searchRes.data.data || [];
+
     console.log(`✅ Received ${items.length} item(s) from Roblox`);
 
-    // Dump the first raw item for inspection
-    if (items.length > 0) {
-      console.log("🧪 First raw item:", JSON.stringify(items[0], null, 2));
-    } else {
-      console.log("🪹 No items returned.");
-    }
+    if (items.length === 0) return res.json({ results: [] });
 
-    const simplifiedItems = items.map(item => ({
-      id: item.id,
-      name: item.name || "Unknown Item",
-      price: item.lowestPrice || 0,
-      creator: item.creatorName || "Unknown Creator",
-      thumbnail: item.thumbnail?.imageUrl || null,
-      assetType: item.assetType
-    }));
+    // Fetch detailed info
+    const detailedItems = await Promise.all(
+      items.map(async item => {
+        try {
+          const detailRes = await axios.get(`https://economy.roblox.com/v1/assets/${item.id}/details`, {
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+            }
+          });
 
-    console.log("📤 Sending simplified results:", simplifiedItems);
-    return res.json({ results: simplifiedItems });
+          const info = detailRes.data;
+
+          return {
+            id: item.id,
+            name: info.Name || "Unknown Item",
+            price: info.PriceInRobux || 0,
+            creator: info.Creator?.Name || "Unknown Creator",
+            thumbnail: item.thumbnail?.imageUrl || null,
+            assetType: item.assetType
+          };
+        } catch (e) {
+          console.warn(`⚠️ Failed to fetch details for item ${item.id}`);
+          return {
+            id: item.id,
+            name: "Unknown Item",
+            price: 0,
+            creator: "Unknown Creator",
+            thumbnail: null,
+            assetType: item.assetType
+          };
+        }
+      })
+    );
+
+    console.log("📤 Sending full item details");
+    return res.json({ results: detailedItems });
 
   } catch (err) {
     console.error("❌ Proxy Error:");
@@ -82,6 +103,7 @@ app.get('/search', async (req, res) => {
     return res.status(500).json({ error: "Failed to fetch item info" });
   }
 });
+
 
 app.get('/', (req, res) => {
   res.send('✅ Roblox Marketplace Proxy is running!');
