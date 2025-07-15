@@ -66,13 +66,18 @@ app.get('/search', async (req, res) => {
           const info = detailRes.data;
 
           return {
-            id: item.id,
-            name: info.Name ,
-            price: info.PriceInRobux || null,
-            creator: info.Creator?.Name || null,
-            thumbnail: item.thumbnail?.imageUrl || null,
-            assetType: item.assetType
-          };
+  id: item.id, // from catalog search, always present
+
+  name: info?.Name ?? "Unknown Item", // ✅ direct from details endpoint
+
+  price: typeof info?.PriceInRobux === 'number' ? info.PriceInRobux : null, // ✅ numeric price only
+
+  creator: info?.Creator?.Name ?? "Unknown Creator", // ✅ safe access
+
+  thumbnail: `https://www.roblox.com/asset-thumbnail/image?assetId=${item.id}&width=420&height=420&format=png`, // ✅ always works
+
+  assetType: item.assetType ?? null // from catalog search
+};
         } catch (e) {
           console.warn(`⚠️ Failed to fetch details for item ${item.id}`);
           return {
