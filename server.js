@@ -43,55 +43,49 @@ app.get('/search', async (req, res) => {
     const searchRes = await axios.get('https://catalog.roblox.com/v1/search/items', {
       params,
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' // realistic UA
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
       }
     });
 
     const items = searchRes.data.data || [];
-
     console.log(`✅ Received ${items.length} item(s) from Roblox`);
 
     if (items.length === 0) return res.json({ results: [] });
 
-    // Fetch detailed info
     const detailedItems = await Promise.all(
-      items.map(async item => {
-        try {
-          const detailRes = await axios.get(`https://economy.roblox.com/v1/assets/${item.id}/details`, {
-            headers: {
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-            }
-          });
+      items
+        .filter(item => item.assetType) // Filter out invalid entries
+        .map(async item => {
+          try {
+            const detailRes = await axios.get(`https://economy.roblox.com/v1/assets/${item.id}/details`, {
+              headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
+              }
+            });
 
-          const info = detailRes.data;
+            const info = detailRes.data;
 
-          return {
-  id: item.id, // from catalog search, always present
-
-  name: info?.Name ?? "Unknown Item", // ✅ direct from details endpoint
-
-  price: typeof info?.PriceInRobux === 'number' ? info.PriceInRobux : null, // ✅ numeric price only
-
-  creator: info?.Creator?.Name ?? "Unknown Creator", // ✅ safe access
-
-  thumbnail: `https://www.roblox.com/asset-thumbnail/image?assetId=${item.id}&width=420&height=420&format=png`, // ✅ always works
-
-  assetType: item.assetType ?? null // from catalog search
-};
-       } catch (e) {
-  console.warn(`⚠️ Failed to fetch details for item ${item.id}`);
-  console.warn("  ↪ Error:", e.response?.data?.errors?.[0]?.message || e.message);
-  return {
-    id: item.id,
-    name: "Unknown Item",
-    price: 0,
-    creator: "Unknown Creator",
-    thumbnail: `https://www.roblox.com/asset-thumbnail/image?assetId=${item.id}&width=420&height=420&format=png`,
-    assetType: item.assetType ?? null
-
-          };
-        }
-      })
+            return {
+              id: item.id,
+              name: info?.Name?.trim() || "Unknown Item",
+              price: typeof info?.PriceInRobux === 'number' ? info.PriceInRobux : null,
+              creator: info?.Creator?.Name || "Unknown Creator",
+              thumbnail: `https://www.roblox.com/asset-thumbnail/image?assetId=${item.id}&width=420&height=420&format=png`,
+              assetType: item.assetType
+            };
+          } catch (e) {
+            console.warn(`⚠️ Failed to fetch details for item ${item.id}`);
+            console.warn("  ↪ Error:", e.response?.data?.errors?.[0]?.message || e.message);
+            return {
+              id: item.id,
+              name: item.name || "Unknown Item",
+              price: item.lowestPrice || 0,
+              creator: item.creatorName || "Unknown Creator",
+              thumbnail: `https://www.roblox.com/asset-thumbnail/image?assetId=${item.id}&width=420&height=420&format=png`,
+              assetType: item.assetType ?? null
+            };
+          }
+        })
     );
 
     console.log("📤 Sending full item details");
@@ -110,7 +104,6 @@ app.get('/search', async (req, res) => {
     return res.status(500).json({ error: "Failed to fetch item info" });
   }
 });
-
 
 app.get('/', (req, res) => {
   res.send('✅ Roblox Marketplace Proxy is running!');
