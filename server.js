@@ -67,9 +67,9 @@ app.get('/search', async (req, res) => {
 
           return {
             id: item.id,
-            name: info.Name || "Unknown Item",
-            price: info.PriceInRobux || 0,
-            creator: info.Creator?.Name || "Unknown Creator",
+            name: info.Name ,
+            price: info.PriceInRobux || null,
+            creator: info.Creator?.Name || null,
             thumbnail: item.thumbnail?.imageUrl || null,
             assetType: item.assetType
           };
