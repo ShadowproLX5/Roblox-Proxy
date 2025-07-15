@@ -78,15 +78,17 @@ app.get('/search', async (req, res) => {
 
   assetType: item.assetType ?? null // from catalog search
 };
-        } catch (e) {
-          console.warn(`⚠️ Failed to fetch details for item ${item.id}`);
-          return {
-            id: item.id,
-            name: "Unknown Item",
-            price: 0,
-            creator: "Unknown Creator",
-            thumbnail: null,
-            assetType: item.assetType
+       } catch (e) {
+  console.warn(`⚠️ Failed to fetch details for item ${item.id}`);
+  console.warn("  ↪ Error:", e.response?.data?.errors?.[0]?.message || e.message);
+  return {
+    id: item.id,
+    name: "Unknown Item",
+    price: 0,
+    creator: "Unknown Creator",
+    thumbnail: `https://www.roblox.com/asset-thumbnail/image?assetId=${item.id}&width=420&height=420&format=png`,
+    assetType: item.assetType ?? null
+
           };
         }
       })
