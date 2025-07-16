@@ -4,6 +4,7 @@ const cors = require('cors');
 
 const app = express();
 app.use(cors());
+
 const PORT = 3000;
 
 app.get('/search', async (req, res) => {
@@ -18,20 +19,24 @@ app.get('/search', async (req, res) => {
       params: {
         Keyword: name,
         Category: 'All',
-        Subcategory: 'All',
-        Limit: 30,
         SortType: 3,
-        AssetType: type // user provides the raw numeric asset type directly
+        Limit: 30,
+        AssetType: type
+      },
+      headers: {
+        'User-Agent': 'RobloxProxy/1.0',
+        'Accept': 'application/json'
       }
     });
 
-    res.json(response.data);
-  } catch (err) {
-    console.error('Error from Roblox API:', err.message);
-    res.status(500).json({ error: 'Failed to fetch from Roblox' });
+    const idsOnly = response.data.data.map(item => item.id);
+    res.json(idsOnly);
+  } catch (error) {
+    console.error('Roblox API Error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch from Roblox Catalog API' });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Simple proxy running at http://localhost:${PORT}`);
+  console.log(`✅ Proxy running on http://localhost:${PORT}`);
 });
