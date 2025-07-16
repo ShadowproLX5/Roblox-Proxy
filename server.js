@@ -22,18 +22,14 @@ app.get('/search', async (req, res) => {
         SortType: 3,
         Limit: 30,
         AssetType: type
-      },
-      headers: {
-        'User-Agent': 'RobloxProxy/1.0',
-        'Accept': 'application/json'
       }
     });
 
     const idsOnly = response.data.data.map(item => item.id);
     res.json(idsOnly);
   } catch (error) {
-    console.error('Roblox API Error:', error.message);
-    res.status(500).json({ error: 'Failed to fetch from Roblox Catalog API' });
+    console.error('Roblox API error:', error.message);
+    res.status(500).json({ error: 'Failed to fetch from Roblox' });
   }
 });
 
