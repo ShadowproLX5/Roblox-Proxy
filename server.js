@@ -1,49 +1,65 @@
-const express = require('express');
-const axios = require('axios');
-const cors = require('cors');
+const express = require("express");
+const axios = require("axios");
+const cors = require("cors");
 
 const app = express();
+const port = 3000;
+
 app.use(cors());
 
-const PORT = 3000;
+app.get("/catalog", async (req, res) => {
+    const { keyword = "", category = "All", limit = 10 } = req.query;
 
-// Helper to fetch items from Roblox API
-async function fetchRobloxItems({ name, type }) {
-  const params = {
-    Category: 'All',
-    SortType: 3,
-    Limit: 30,
-    AssetType: type
-  };
+    // Build category type filter
+    const categoryMap = {
+        Hat: "Hat",
+        Hair: "HairAccessory",
+        Face: "FaceAccessory",
+        Neck: "NeckAccessory",
+        Shoulder: "ShoulderAccessory",
+        Front: "FrontAccessory",
+        Back: "BackAccessory",
+        Waist: "WaistAccessory",
+        Shirt: "Shirt",
+        Pants: "Pants",
+        Jacket: "Jacket",
+        Sweater: "Sweater",
+        TShirt: "TShirt",
+        Classic: "ClassicClothing",
+        Accessory: "Accessory",
+        All: null
+    };
 
-  // If name is not empty, use it as a keyword
-  if (name) {
-    params.Keyword = name;
-  } else {
-    // For random, remove Keyword and randomize sort order
-    params.SortType = Math.floor(Math.random() * 5) + 1; // Random sort type between 1-5
-  }
+    const assetType = categoryMap[category] || null;
 
-  const response = await axios.get('https://catalog.roblox.com/v1/search/items', { params });
-  return response.data.data.map(item => item.id);
-}
+    try {
+        const response = await axios.get("https://catalog.roblox.com/v1/catalog/items", {
+            params: {
+                Keyword: keyword,
+                Category: "3", // Avatar shop
+                Limit: limit,
+                SortType: 3,
+                CreatorType: "User",
+                SalesTypeFilter: "1", // All sales types
+                AssetTypes: assetType ? assetType : undefined
+            }
+        });
 
-app.get('/search', async (req, res) => {
-  const { name, type } = req.query;
+        const items = response.data.data.map(item => ({
+            id: item.id,
+            name: item.name,
+            price: item.price ?? "Free",
+            creator: item.creatorName,
+            thumbnail: item.thumbnail?.imageUrl ?? null
+        }));
 
-  if (!type) {
-    return res.status(400).json({ error: 'Missing type' });
-  }
-
-  try {
-    const items = await fetchRobloxItems({ name, type });
-    res.json(items);
-  } catch (error) {
-    console.error('Roblox API error:', error.message);
-    res.status(500).json({ error: 'Failed to fetch from Roblox' });
-  }
+        res.json(items);
+    } catch (err) {
+        console.error("Catalog fetch error:", err.response?.data || err.message);
+        res.status(500).json({ error: "Failed to fetch catalog data" });
+    }
 });
 
-app.listen(PORT, () => {
-  console.log(`✅ Proxy running on http://localhost:${PORT}`);
+app.listen(port, () => {
+    console.log(`Roblox Catalog Proxy running on http://localhost:${port}`);
 });
