@@ -8,40 +8,19 @@ const port = 3000;
 app.use(cors());
 
 app.get("/catalog", async (req, res) => {
-    const { keyword = "", category = "All", limit = 10 } = req.query;
-
-    // Build category type filter
-    const categoryMap = {
-        Hat: "Hat",
-        Hair: "HairAccessory",
-        Face: "FaceAccessory",
-        Neck: "NeckAccessory",
-        Shoulder: "ShoulderAccessory",
-        Front: "FrontAccessory",
-        Back: "BackAccessory",
-        Waist: "WaistAccessory",
-        Shirt: "Shirt",
-        Pants: "Pants",
-        Jacket: "Jacket",
-        Sweater: "Sweater",
-        TShirt: "TShirt",
-        Classic: "ClassicClothing",
-        Accessory: "Accessory",
-        All: null
-    };
-
-    const assetType = categoryMap[category] || null;
+    const { keyword = "", limit = 10 } = req.query;
 
     try {
-        const response = await axios.get("https://catalog.roblox.com/v1/catalog/items", {
+        const response = await axios.get("https://catalog.roblox.com/v1/search/items", {
             params: {
                 Keyword: keyword,
-                Category: "3", // Avatar shop
                 Limit: limit,
                 SortType: 3,
-                CreatorType: "User",
-                SalesTypeFilter: "1", // All sales types
-                AssetTypes: assetType ? assetType : undefined
+                SalesTypeFilter: 1 // all types (free + paid)
+            },
+            headers: {
+                "User-Agent": "Roblox/WinInet",
+                "Accept": "application/json"
             }
         });
 
@@ -61,5 +40,5 @@ app.get("/catalog", async (req, res) => {
 });
 
 app.listen(port, () => {
-    console.log(`Roblox Catalog Proxy running on http://localhost:${port}`);
+    console.log(`✅ Roblox Catalog Proxy running on http://localhost:${port}`);
 });
